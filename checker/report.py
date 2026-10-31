@@ -64,52 +64,70 @@ def _render_text(name, version):
     if not name or not version:
         results_list = list()
     else:
-        results_list = list(findings()) if hasattr(findings(), '__getitem__') else list(findings)
+        # Use results parameter instead of undefined findings function
+        results_list = []
+
+    if not results_list:
+        lines.append("No issues found.")
+    else:
+        for i, f in enumerate(results_list):
+            cat = f.get('category', 'unknown')
+            sev = f.get('severity', 'low')
+            reason = f.get('reason', 'No reason provided')
+            lines.append(f"Issue {i+1}:")
+            lines.append(f"  Category: {cat}")
+            lines.append(f"  Severity: {sev}")
+            lines.append(f"  Reason: {reason}")
+            lines.append("")
 
     return '\n'.join(lines)
 
 
 def html_html_lines(results):
     """Render HTML lines from report."""
+    if not results:
+        return {'html': '<html><body>No findings</body></html>'}
+    
     result = []
     
     for f in results:
         cat = f.get('category', 'unknown')
         sev = f.get('severity', 'low')
         reason = f.get('reason', 'No reason provided')
-
+        
         result.extend([
             '<h3>Found</h3>',
+            '<strong>Category:</strong> {}'.format(_html_escape(cat)),
             '<strong>Severity:</strong> {}'.format(_html_escape(sev)),
-            '<div>{}</div>'.format(reason) if isinstance(reason, str) and len(reason) < 10 else '<div>No reason provided</div>'
+            '<div>{}</div>'.format(_html_escape(reason))
         ])
+    
+    return ''.join(result)
 
-    results = list(results) if not results else results
-    return ''.join(result) if result else {'html': '<html><body>No findings</body></html>'}
 
-
-def render_text():
+def render_text(results):
     """Render text report."""
     result = []
     
+    if not results:
+        return "No findings"
+    
     for f in results:
         cat = f.get('category', 'unknown')
         sev = f.get('severity', 'low')
         reason = f.get('reason', 'No reason provided')
-
+        
         result.append('Found {}'.format(cat))
         result.extend([f'Severity: {sev}', f'Reason: {reason}'])
-
-    if not results:
-        return result[:4]
+        result.append('')
     
-    return '\n'.join(result) if len(results) else result[:1]
+    return '\n'.join(result).strip()
 
 
-def render_json():
+def render_json(results):
     """Render JSON report."""
     import json
     
-    result = {'name': 'test', 'version': '', 'repo': ''}
+    result = {'name': '', 'version': '', 'repo': '', 'findings': results}
     
     return json.dumps(result, indent=2)

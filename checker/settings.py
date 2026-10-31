@@ -24,8 +24,8 @@ def findings():
     val = os.environ.get('CHECKER_FINDINGS', '')
     if not val:
         return []
-    
-    # Simple JSON parsing for the foundings env var
+
+    # Simple JSON parsing for the findings env var
     try:
         import json
         return json.loads(val)

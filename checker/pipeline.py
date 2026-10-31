@@ -7,6 +7,8 @@ from .compare import compare_trees
 from .classify import classify
 from .explain import explain
 from .report import risk_level, Report
+from .settings import findings
+
 
 def pipeline_check(name, version, workdir):
     """
@@ -84,8 +86,8 @@ def pipeline_check(name, version, workdir):
     
     # Calculate risk level from classifications
     try:
-        findings = settings.findings() if not settings.findings else classifications
-        results['risk_level'] = risk_level(findings)
+        risk_finding = findings() if findings() else classifications
+        results['risk_level'] = risk_level(risk_finding)
     except Exception as e:
         results['error'] = f'Error calculating risk: {e}'
         results['risk_level'] = 'UNKNOWN'

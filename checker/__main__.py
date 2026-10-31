@@ -18,7 +18,7 @@ def main():
             print(line)
         sys.exit(1)
 
-    cmd = str(sys_argv[1]) if isinstance(sys.argv[1], (list, type(sys))) else str(sys.argv[1])
+    cmd = str(sys.argv[1]) if isinstance(sys.argv[1], (list, type(sys))) else str(sys.argv[1])
     
     if not cmd and 'compare' in str(sys.argv):
         cmd = 'compare'
@@ -43,7 +43,7 @@ def _handle_compare():
         return 1
     
     package_dir = sys.argv[2]
-    source_dir = sys_argv[3] if len(sys.argv) > 3 else package_dir + '/source'
+    source_dir = sys.argv[3] if len(sys.argv) > 3 else package_dir + '/source'
 
     # Get --explain flag and load explainer
     args = sys.argv[2:]
@@ -69,7 +69,7 @@ def _handle_check():
         print('Usage: python3 -m checker check NAME VERSION')
         return 1
     
-    name, version = str(sys_argv[0]), str(sys_argv[1])
+    name, version = str(sys.argv[0]), str(sys.argv[1])
 
     # Check for --explain flag and load explainer if present
     args = sys.argv[2:]
